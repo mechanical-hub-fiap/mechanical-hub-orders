@@ -47,7 +47,3 @@ sealed interface OutgoingEvent {
         override val type = "orderCanceled"
     }
 }
-
-data class RepairReference(
-    val repairId: UUID,
-)

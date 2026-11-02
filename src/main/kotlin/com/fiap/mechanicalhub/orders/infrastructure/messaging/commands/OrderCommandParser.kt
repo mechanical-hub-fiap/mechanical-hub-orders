@@ -10,12 +10,6 @@ import tools.jackson.databind.json.JsonMapper
 import java.math.BigDecimal
 import java.util.UUID
 
-/** Mensagem fora do contrato: erro permanente, vai direto para a DLQ. */
-class InvalidMessageException(
-    message: String,
-    cause: Throwable? = null,
-) : RuntimeException(message, cause)
-
 /**
  * Converte o envelope JSON (infrastructure.md §4) no comando da aplicacao.
  * Campos do envelope e do payload ficam no mesmo nivel.

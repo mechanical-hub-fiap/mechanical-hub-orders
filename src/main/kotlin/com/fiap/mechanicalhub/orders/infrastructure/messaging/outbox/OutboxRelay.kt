@@ -8,39 +8,6 @@ import com.fiap.mechanicalhub.orders.logging.Stage
 import org.slf4j.LoggerFactory
 import org.springframework.transaction.support.TransactionTemplate
 import java.time.Clock
-import java.util.UUID
-
-/** Linha `PENDING` do outbox pronta para envio. */
-data class PendingOutboxMessage(
-    val sequence: Long,
-    val eventId: UUID,
-    val aggregateId: UUID,
-    val eventType: String,
-    val payload: String,
-)
-
-/** Acesso ao `outbox_events` usado pelo relay. */
-interface OutboxStore {
-    /** Lideranca do ciclo: so a instancia que obtem o lock publica. */
-    fun tryAcquireLeadership(): Boolean
-
-    fun findPending(limit: Int): List<PendingOutboxMessage>
-
-    fun markSent(
-        sequence: Long,
-        clock: Clock,
-    )
-
-    fun registerFailure(
-        sequence: Long,
-        error: String,
-    )
-}
-
-/** Envio sincrono para a fila FIFO do orquestrador. */
-fun interface OutboxMessagePublisher {
-    fun publish(message: PendingOutboxMessage)
-}
 
 /**
  * Relay do transactional outbox (failure_handling.md §4): publica os eventos

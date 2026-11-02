@@ -4,8 +4,6 @@ import com.fiap.mechanicalhub.orders.domain.exceptions.DomainException
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.dao.NonTransientDataAccessException
 
-enum class ErrorClass { TRANSIENT, PERMANENT }
-
 /**
  * Classificacao de failure_handling.md §1. Permanente: fora do contrato, regra
  * de negocio ou transicao invalida, erro de dado nao retentavel. Qualquer outra

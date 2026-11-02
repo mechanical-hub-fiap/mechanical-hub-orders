@@ -13,8 +13,6 @@ import org.hibernate.type.SqlTypes
 import java.time.Instant
 import java.util.UUID
 
-enum class OutboxStatus { PENDING, SENT }
-
 @Entity
 @Table(name = "outbox_events")
 class OutboxEventEntity(

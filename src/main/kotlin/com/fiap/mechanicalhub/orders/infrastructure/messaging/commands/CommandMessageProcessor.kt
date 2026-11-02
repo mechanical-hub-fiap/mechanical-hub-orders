@@ -1,31 +1,11 @@
 package com.fiap.mechanicalhub.orders.infrastructure.messaging.commands
 
-import com.fiap.mechanicalhub.orders.application.notifications.Notification
 import com.fiap.mechanicalhub.orders.application.usecases.commands.CommandOutcome
 import com.fiap.mechanicalhub.orders.infrastructure.observability.LogContext
 import com.fiap.mechanicalhub.orders.logging.FlowLog
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
 import org.springframework.stereotype.Component
-
-/** O que o listener faz com a mensagem depois do processamento. */
-sealed interface CommandDecision {
-    /** COMMIT feito (ou duplicata): apagar a mensagem e, se houver, notificar. */
-    data class Acknowledge(
-        val notification: Notification?,
-    ) : CommandDecision
-
-    /** Erro transitorio: nao apagar; nova tentativa apos `delaySeconds`. */
-    data class Retry(
-        val delaySeconds: Int,
-        val error: Throwable,
-    ) : CommandDecision
-
-    /** Erro permanente: enviar a DLQ e apagar da fila de origem. */
-    data class DeadLetter(
-        val error: Throwable,
-    ) : CommandDecision
-}
 
 /**
  * Parse → caso de uso → decisao, isolado do SDK para ser testado sem SQS.

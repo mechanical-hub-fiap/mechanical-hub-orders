@@ -17,14 +17,6 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
-data class OpenServiceOrderCommand(
-    val customerId: UUID,
-    val vehicleId: UUID,
-    val repairIds: List<UUID>,
-    val requestDescription: String,
-    val userId: UUID,
-)
-
 /** POST /orders: abre a ordem ja em diagnostico para cliente e veiculo existentes. */
 @Service
 class OpenServiceOrderUseCase(

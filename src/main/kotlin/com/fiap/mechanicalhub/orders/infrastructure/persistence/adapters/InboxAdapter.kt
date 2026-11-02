@@ -1,7 +1,6 @@
 package com.fiap.mechanicalhub.orders.infrastructure.persistence.adapters
 
 import com.fiap.mechanicalhub.orders.application.events.OutgoingEvent
-import com.fiap.mechanicalhub.orders.application.ports.ConsumerTransaction
 import com.fiap.mechanicalhub.orders.application.ports.InboxPort
 import com.fiap.mechanicalhub.orders.application.ports.ProcessedCommand
 import com.fiap.mechanicalhub.orders.infrastructure.messaging.OutgoingEventCodec
@@ -35,14 +34,5 @@ class InboxAdapter(
             response?.let(codec::encode),
             Timestamp.from(clock.instant()),
         )
-    }
-}
-
-@Component
-class JdbcConsumerTransaction(
-    private val jdbcTemplate: JdbcTemplate,
-) : ConsumerTransaction {
-    override fun applyLockTimeout() {
-        jdbcTemplate.execute("SET LOCAL lock_timeout = '5s'")
     }
 }
