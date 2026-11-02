@@ -2,11 +2,16 @@ package com.fiap.mechanicalhub.orders.infrastructure.messaging.commands
 
 import com.fiap.mechanicalhub.orders.application.ports.NotificationPort
 import com.fiap.mechanicalhub.orders.infrastructure.observability.LogContext
+import com.fiap.mechanicalhub.orders.logging.FlowFields
+import com.fiap.mechanicalhub.orders.logging.FlowLog
+import com.fiap.mechanicalhub.orders.logging.LogLevel
+import com.fiap.mechanicalhub.orders.logging.Stage
 import io.awspring.cloud.sqs.annotation.SqsListener
 import io.awspring.cloud.sqs.listener.SqsHeaders
 import io.awspring.cloud.sqs.listener.Visibility
 import io.awspring.cloud.sqs.listener.acknowledgement.Acknowledgement
 import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import org.springframework.messaging.Message
 import org.springframework.stereotype.Component
 
@@ -53,19 +58,25 @@ class OrderCommandListener(
             }
 
             is CommandDecision.Retry -> {
-                log.warn(
-                    "Erro transitorio no comando (recebimento {}), nova tentativa em {} s: {}",
-                    receiveCount,
-                    decision.delaySeconds,
-                    decision.error.toString(),
-                )
+                // O FAIL (WARN) da tentativa ja saiu no processador.
                 visibility.changeTo(decision.delaySeconds)
             }
 
             is CommandDecision.DeadLetter -> {
-                log.error("Erro permanente no comando, enviado a DLQ: {}", decision.error.toString())
                 deadLetterPublisher.publish(message, decision.error)
                 acknowledgement.acknowledge()
+                FlowLog.write(
+                    log,
+                    LogLevel.ERROR,
+                    FlowFields(
+                        orderId = MDC.get(LogContext.ORDER_ID),
+                        status = processor.statusOf(message.payload),
+                        msg = "Comando enviado para a DLQ",
+                        stage = Stage.FAIL,
+                        attempt = receiveCount,
+                        error = decision.error,
+                    ),
+                )
             }
         }
     }

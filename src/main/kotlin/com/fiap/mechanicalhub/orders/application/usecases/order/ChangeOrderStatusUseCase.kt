@@ -7,6 +7,7 @@ import com.fiap.mechanicalhub.orders.application.ports.ServiceOrderRepository
 import com.fiap.mechanicalhub.orders.domain.enums.OrderStatusEnum
 import com.fiap.mechanicalhub.orders.domain.exceptions.InvalidOrderTransitionException
 import com.fiap.mechanicalhub.orders.domain.model.ServiceOrder
+import com.fiap.mechanicalhub.orders.logging.FlowLog
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
@@ -61,6 +62,7 @@ class ChangeOrderStatusUseCase(
             }
         val saved = serviceOrderRepository.save(changed)
         event?.let(outbox::append)
+        FlowLog.detail("orderStatus" to saved.status, "outboxEvent" to event?.type, "transactionId" to saved.sagaTransactionId)
         return saved
     }
 }

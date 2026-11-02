@@ -1,5 +1,7 @@
 package com.fiap.mechanicalhub.orders.infrastructure.notification.channels
 
+import com.fiap.mechanicalhub.orders.logging.FlowLog
+import com.fiap.mechanicalhub.orders.logging.LogLevel
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
@@ -27,6 +29,8 @@ interface NotificationChannel {
 /**
  * E-mail, reaproveitado do `EmailSender` do monolito: registra o envio em log.
  * A integracao com um provedor real de e-mail fica pendente (acesso externo).
+ * O log nao leva destinatario nem corpo (logging-standard §6): o corpo tem o
+ * link com o token de aprovacao.
  */
 @Component
 class EmailSender : NotificationChannel {
@@ -34,8 +38,8 @@ class EmailSender : NotificationChannel {
         recipient: Recipient,
         message: NotificationMessage,
     ) {
-        val email = recipient.email ?: return
-        log.info("Enviando email para {} com assunto: {} e corpo: {}", email, message.subject, message.body)
+        if (recipient.email == null) return
+        FlowLog.note(log, LogLevel.DEBUG, "E-mail de notificacao enviado (envio simulado)", "channel" to "EMAIL")
     }
 
     private companion object {
@@ -45,7 +49,8 @@ class EmailSender : NotificationChannel {
 
 /**
  * WhatsApp, reaproveitado do `WhatsAppMessenger` do monolito: registra o envio
- * em log. A integracao com a API real do WhatsApp fica pendente.
+ * em log, sem o telefone do destinatario (logging-standard §6). A integracao
+ * com a API real do WhatsApp fica pendente.
  */
 @Component
 class WhatsAppMessenger : NotificationChannel {
@@ -53,8 +58,8 @@ class WhatsAppMessenger : NotificationChannel {
         recipient: Recipient,
         message: NotificationMessage,
     ) {
-        val telephone = recipient.telephone ?: return
-        log.info("Enviando WhatsApp para {}: {}", telephone, message.subject)
+        if (recipient.telephone == null) return
+        FlowLog.note(log, LogLevel.DEBUG, "WhatsApp de notificacao enviado (envio simulado)", "channel" to "WHATSAPP")
     }
 
     private companion object {

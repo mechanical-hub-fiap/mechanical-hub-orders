@@ -42,6 +42,7 @@
                         <omitEmptyFields>true</omitEmptyFields>
                         <pattern>
                             {
+                              "service": "mechanical-hub-orders",
                               "service_name": "${applicationName:-mechanical-hub-orders}",
                               "environment": "${environment:-production}",
                               "trace_id": "%mdc{trace_id:-}",

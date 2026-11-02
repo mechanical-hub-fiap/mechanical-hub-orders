@@ -6,6 +6,7 @@ import com.fiap.mechanicalhub.orders.application.notifications.Notification
 import com.fiap.mechanicalhub.orders.application.ports.ServiceOrderRepository
 import com.fiap.mechanicalhub.orders.application.usecases.order.requireById
 import com.fiap.mechanicalhub.orders.domain.approval.ApprovalToken
+import com.fiap.mechanicalhub.orders.logging.FlowLog
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.security.SecureRandom
@@ -27,6 +28,7 @@ class RequestApprovalUseCase(
                         .requireById(command.orderId)
                         .requestApproval(command.transactionId, command.orderCost, token.hash()),
                 )
+            FlowLog.detail("orderStatus" to order.status, "budgetId" to command.budgetId, "orderCost" to command.orderCost)
             CommandEffect(
                 notification = Notification.BudgetReady(order.id, order.orderNumber, order.customerId, command.orderCost, token),
             )
@@ -42,7 +44,9 @@ class MarkStockPendingUseCase(
     @Transactional
     fun execute(command: OrderCommand.MarkStockPending): CommandOutcome =
         runner.run(command.idempotencyKey) {
-            serviceOrderRepository.save(serviceOrderRepository.requireById(command.orderId).markStockPending(command.transactionId))
+            val order =
+                serviceOrderRepository.save(serviceOrderRepository.requireById(command.orderId).markStockPending(command.transactionId))
+            FlowLog.detail("orderStatus" to order.status, "hasStockPending" to order.hasStockPending)
             CommandEffect()
         }
 }
@@ -56,7 +60,8 @@ class ClearStockPendingUseCase(
     @Transactional
     fun execute(command: OrderCommand.ClearStockPending): CommandOutcome =
         runner.run(command.idempotencyKey) {
-            serviceOrderRepository.save(serviceOrderRepository.requireById(command.orderId).clearStockPending())
+            val order = serviceOrderRepository.save(serviceOrderRepository.requireById(command.orderId).clearStockPending())
+            FlowLog.detail("orderStatus" to order.status, "hasStockPending" to order.hasStockPending)
             CommandEffect()
         }
 }
@@ -71,6 +76,7 @@ class AwaitPaymentUseCase(
     fun execute(command: OrderCommand.SendPaymentLink): CommandOutcome =
         runner.run(command.idempotencyKey) {
             val order = serviceOrderRepository.save(serviceOrderRepository.requireById(command.orderId).awaitPayment())
+            FlowLog.detail("orderStatus" to order.status)
             CommandEffect(
                 notification = Notification.PaymentLinkReady(order.id, order.orderNumber, order.customerId, command.paymentLink),
             )
@@ -87,6 +93,7 @@ class ReleaseOrderUseCase(
     fun execute(command: OrderCommand.ReleaseOrder): CommandOutcome =
         runner.run(command.idempotencyKey) {
             val order = serviceOrderRepository.save(serviceOrderRepository.requireById(command.orderId).releaseForExecution())
+            FlowLog.detail("orderStatus" to order.status)
             CommandEffect(notification = Notification.OrderReleased(order.id, order.orderNumber, order.responsibleUserId))
         }
 }
@@ -101,6 +108,7 @@ class CancelOrderUseCase(
     fun execute(command: OrderCommand.CancelOrder): CommandOutcome =
         runner.run(command.idempotencyKey) {
             val order = serviceOrderRepository.save(serviceOrderRepository.requireById(command.orderId).cancel())
+            FlowLog.detail("orderStatus" to order.status, "reason" to command.reason)
             CommandEffect(response = OutgoingEvent.OrderCanceled(command.transactionId, order.id))
         }
 }

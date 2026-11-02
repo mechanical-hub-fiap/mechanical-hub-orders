@@ -11,6 +11,7 @@ import com.fiap.mechanicalhub.orders.domain.approval.matchesApprovalToken
 import com.fiap.mechanicalhub.orders.domain.enums.OrderStatusEnum
 import com.fiap.mechanicalhub.orders.domain.exceptions.ServiceOrderNotFoundException
 import com.fiap.mechanicalhub.orders.domain.model.ServiceOrder
+import com.fiap.mechanicalhub.orders.logging.FlowLog
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
@@ -95,6 +96,7 @@ class ApproveOrderUseCase(
         val order = serviceOrderRepository.findById(orderId).authorizedBy(approvalToken, orderId.toString())
         val approved = serviceOrderRepository.save(order.approve())
         outbox.append(OutgoingEvent.OrderApproved(approved.requireSaga(), approved.id))
+        FlowLog.detail("orderStatus" to approved.status, "transactionId" to approved.sagaTransactionId)
     }
 }
 
@@ -112,5 +114,6 @@ class RejectOrderUseCase(
         val order = serviceOrderRepository.findById(orderId).authorizedBy(approvalToken, orderId.toString())
         val rejected = serviceOrderRepository.save(order.reject())
         outbox.append(OutgoingEvent.OrderRejected(rejected.requireSaga(), rejected.id))
+        FlowLog.detail("orderStatus" to rejected.status, "transactionId" to rejected.sagaTransactionId)
     }
 }

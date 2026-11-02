@@ -3,11 +3,14 @@ package com.fiap.mechanicalhub.orders.infrastructure.http.controllers
 import com.fiap.mechanicalhub.orders.application.usecases.customer.ApproveOrderUseCase
 import com.fiap.mechanicalhub.orders.application.usecases.customer.GetCustomerOrderUseCase
 import com.fiap.mechanicalhub.orders.application.usecases.customer.RejectOrderUseCase
+import com.fiap.mechanicalhub.orders.infrastructure.http.RouteStep
 import com.fiap.mechanicalhub.orders.infrastructure.http.dto.CustomerOrderResponse
 import com.fiap.mechanicalhub.orders.infrastructure.http.dto.toResponse
+import com.fiap.mechanicalhub.orders.infrastructure.http.restStep
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -42,7 +45,7 @@ class ExternalController(
     fun approve(
         @PathVariable orderId: UUID,
         @RequestHeader(APPROVAL_TOKEN_HEADER, required = false) approvalToken: String?,
-    ) = approveOrder.execute(orderId, approvalToken)
+    ) = restStep(log, orderId, APPROVE_ORDER) { approveOrder.execute(orderId, approvalToken) }
 
     @PostMapping("/{orderId}/reject")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -51,9 +54,14 @@ class ExternalController(
     fun reject(
         @PathVariable orderId: UUID,
         @RequestHeader(APPROVAL_TOKEN_HEADER, required = false) approvalToken: String?,
-    ) = rejectOrder.execute(orderId, approvalToken)
+    ) = restStep(log, orderId, REJECT_ORDER) { rejectOrder.execute(orderId, approvalToken) }
 
     private companion object {
         const val APPROVAL_TOKEN_HEADER = "X-Approval-Token"
+        val log = LoggerFactory.getLogger(ExternalController::class.java)
+        val APPROVE_ORDER =
+            RouteStep("APPROVE_ORDER", "Aprovacao do cliente recebida", "Ordem aprovada, evento orderApproved gravado no outbox")
+        val REJECT_ORDER =
+            RouteStep("REJECT_ORDER", "Recusa do orcamento recebida", "Orcamento recusado, evento orderRejected gravado no outbox")
     }
 }

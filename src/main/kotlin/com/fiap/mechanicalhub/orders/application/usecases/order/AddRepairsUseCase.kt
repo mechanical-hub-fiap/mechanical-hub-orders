@@ -3,6 +3,7 @@ package com.fiap.mechanicalhub.orders.application.usecases.order
 import com.fiap.mechanicalhub.orders.application.ports.RepairRepository
 import com.fiap.mechanicalhub.orders.application.ports.ServiceOrderRepository
 import com.fiap.mechanicalhub.orders.domain.model.ServiceOrder
+import com.fiap.mechanicalhub.orders.logging.FlowLog
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -20,6 +21,7 @@ class AddRepairsUseCase(
     ): ServiceOrder {
         val order = serviceOrderRepository.requireById(orderId)
         repairRepository.requireActive(repairIds)
+        FlowLog.detail("repairIds" to repairIds)
         return serviceOrderRepository.save(order.addRepairs(repairIds, UUID::randomUUID))
     }
 }

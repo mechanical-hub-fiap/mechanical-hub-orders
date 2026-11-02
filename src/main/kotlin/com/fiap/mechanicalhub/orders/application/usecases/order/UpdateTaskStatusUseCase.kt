@@ -3,6 +3,7 @@ package com.fiap.mechanicalhub.orders.application.usecases.order
 import com.fiap.mechanicalhub.orders.application.ports.ServiceOrderRepository
 import com.fiap.mechanicalhub.orders.domain.enums.TaskStatusEnum
 import com.fiap.mechanicalhub.orders.domain.model.ServiceOrder
+import com.fiap.mechanicalhub.orders.logging.FlowLog
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
@@ -21,6 +22,7 @@ class UpdateTaskStatusUseCase(
         status: TaskStatusEnum,
     ): ServiceOrder {
         val order = serviceOrderRepository.requireById(orderId)
+        FlowLog.detail("repairId" to repairId, "taskStatus" to status)
         return serviceOrderRepository.save(order.updateTaskStatus(repairId, status, clock.instant()))
     }
 }

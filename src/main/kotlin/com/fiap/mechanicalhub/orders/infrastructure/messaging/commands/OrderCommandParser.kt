@@ -1,6 +1,7 @@
 package com.fiap.mechanicalhub.orders.infrastructure.messaging.commands
 
 import com.fiap.mechanicalhub.orders.application.commands.OrderCommand
+import com.fiap.mechanicalhub.orders.logging.FlowLog
 import org.springframework.stereotype.Component
 import tools.jackson.core.JacksonException
 import tools.jackson.databind.DeserializationFeature
@@ -36,6 +37,18 @@ class OrderCommandParser(
             throw InvalidMessageException("Mensagem fora do contrato: ${exception.message}", exception)
         }
     }
+
+    /** Campo texto do envelope sem validar o contrato (null se ausente ou ilegivel); usado nos logs. */
+    fun fieldOrNull(
+        body: String,
+        field: String,
+    ): String? =
+        runCatching { jsonMapper.readTree(body).get(field)?.takeIf { it.isString }?.asString() }
+            .getOrNull()
+            ?.takeIf { it.isNotBlank() }
+
+    /** `status` do log (logging-standard §3): `releaseOrder` vira `RELEASE_ORDER`. */
+    fun statusOrNull(body: String): String? = fieldOrNull(body, "type")?.let(FlowLog::statusOf)
 
     private fun toCommand(node: JsonNode): OrderCommand {
         val transactionId = node.uuid("transactionId")

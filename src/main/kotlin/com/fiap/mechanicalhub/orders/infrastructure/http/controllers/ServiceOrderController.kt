@@ -8,16 +8,19 @@ import com.fiap.mechanicalhub.orders.application.usecases.order.OpenServiceOrder
 import com.fiap.mechanicalhub.orders.application.usecases.order.QueryServiceOrdersUseCase
 import com.fiap.mechanicalhub.orders.application.usecases.order.UpdateTaskStatusUseCase
 import com.fiap.mechanicalhub.orders.domain.enums.OrderStatusEnum
+import com.fiap.mechanicalhub.orders.infrastructure.http.RouteStep
 import com.fiap.mechanicalhub.orders.infrastructure.http.dto.AddRepairsRequest
 import com.fiap.mechanicalhub.orders.infrastructure.http.dto.ChangeOrderStatusRequest
 import com.fiap.mechanicalhub.orders.infrastructure.http.dto.OpenServiceOrderRequest
 import com.fiap.mechanicalhub.orders.infrastructure.http.dto.ServiceOrderResponse
 import com.fiap.mechanicalhub.orders.infrastructure.http.dto.UpdateTaskStatusRequest
 import com.fiap.mechanicalhub.orders.infrastructure.http.dto.toResponse
+import com.fiap.mechanicalhub.orders.infrastructure.http.restStep
 import com.fiap.mechanicalhub.orders.infrastructure.security.GatewayPrincipal
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
@@ -49,15 +52,17 @@ class ServiceOrderController(
         @AuthenticationPrincipal principal: GatewayPrincipal,
     ): ServiceOrderResponse {
         val order =
-            openServiceOrder.execute(
-                OpenServiceOrderCommand(
-                    customerId = requireNotNull(request.customerId),
-                    vehicleId = requireNotNull(request.vehicleId),
-                    repairIds = request.serviceIds.orEmpty(),
-                    requestDescription = request.requestDescription.orEmpty(),
-                    userId = principal.id,
-                ),
-            )
+            restStep(log, null, CREATE_ORDER) {
+                openServiceOrder.execute(
+                    OpenServiceOrderCommand(
+                        customerId = requireNotNull(request.customerId),
+                        vehicleId = requireNotNull(request.vehicleId),
+                        repairIds = request.serviceIds.orEmpty(),
+                        requestDescription = request.requestDescription.orEmpty(),
+                        userId = principal.id,
+                    ),
+                )
+            }
         return queryServiceOrders.findById(order.id).toResponse()
     }
 
@@ -67,7 +72,9 @@ class ServiceOrderController(
         @PathVariable orderId: UUID,
         @Valid @RequestBody request: AddRepairsRequest,
     ): ServiceOrderResponse {
-        addRepairs.execute(orderId, request.repairs.orEmpty().mapNotNull { it.repairId })
+        restStep(log, orderId, ADD_REPAIRS) {
+            addRepairs.execute(orderId, request.repairs.orEmpty().mapNotNull { it.repairId })
+        }
         return queryServiceOrders.findById(orderId).toResponse()
     }
 
@@ -77,7 +84,10 @@ class ServiceOrderController(
         @PathVariable orderId: UUID,
         @Valid @RequestBody request: ChangeOrderStatusRequest,
     ): ServiceOrderResponse {
-        changeOrderStatus.execute(orderId, requireNotNull(request.status))
+        val route = request.status?.let { STATUS_STEPS[it] } ?: CHANGE_ORDER_STATUS
+        restStep(log, orderId, route) {
+            changeOrderStatus.execute(orderId, requireNotNull(request.status))
+        }
         return queryServiceOrders.findById(orderId).toResponse()
     }
 
@@ -87,7 +97,9 @@ class ServiceOrderController(
         @Valid @RequestBody request: UpdateTaskStatusRequest,
     ): ServiceOrderResponse {
         val orderId = requireNotNull(request.orderId)
-        updateTaskStatus.execute(orderId, requireNotNull(request.repairId), requireNotNull(request.status))
+        restStep(log, orderId, UPDATE_TASK_STATUS) {
+            updateTaskStatus.execute(orderId, requireNotNull(request.repairId), requireNotNull(request.status))
+        }
         return queryServiceOrders.findById(orderId).toResponse()
     }
 
@@ -107,4 +119,35 @@ class ServiceOrderController(
         queryServiceOrders
             .search(ServiceOrderFilter(status = status, customerId = customerId, responsibleUserId = responsibleUserId))
             .map { it.toResponse() }
+
+    private companion object {
+        val log = LoggerFactory.getLogger(ServiceOrderController::class.java)
+
+        val CREATE_ORDER = RouteStep("CREATE_ORDER", "Abertura de ordem recebida", "Ordem aberta em diagnostico")
+        val ADD_REPAIRS = RouteStep("ADD_REPAIRS", "Inclusao de reparos recebida", "Reparos adicionados a ordem")
+        val UPDATE_TASK_STATUS =
+            RouteStep("UPDATE_TASK_STATUS", "Mudanca de status do reparo recebida", "Status do reparo alterado")
+        val CHANGE_ORDER_STATUS = RouteStep("CHANGE_ORDER_STATUS", "Mudanca de status recebida", "Status da ordem alterado")
+
+        /** `status` do log pelo status pedido pelo mecanico (logging-standard §3). */
+        val STATUS_STEPS =
+            mapOf(
+                OrderStatusEnum.PREPARING to
+                    RouteStep(
+                        "COMPLETE_DIAGNOSIS",
+                        "Finalizacao do diagnostico recebida",
+                        "Diagnostico finalizado, evento diagnosisCompleted gravado no outbox",
+                    ),
+                OrderStatusEnum.IN_PROGRESS to
+                    RouteStep("START_EXECUTION", "Inicio da execucao recebido", "Execucao da ordem iniciada"),
+                OrderStatusEnum.FINISHED to
+                    RouteStep(
+                        "FINISH_ORDER",
+                        "Finalizacao da ordem recebida",
+                        "Ordem finalizada, evento orderFinished gravado no outbox",
+                    ),
+                OrderStatusEnum.DELIVERED to
+                    RouteStep("DELIVER_ORDER", "Entrega do veiculo recebida", "Veiculo entregue ao cliente"),
+            )
+    }
 }
