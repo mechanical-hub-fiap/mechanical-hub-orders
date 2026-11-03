@@ -32,7 +32,8 @@ class GlobalExceptionHandler {
 
     @ExceptionHandler(OptimisticLockingFailureException::class)
     fun versionConflict(exception: OptimisticLockingFailureException): ProblemDetail {
-        log.info("Conflito de versao: {}", exception.message)
+        // O FAIL da etapa sai na rota (restStep); aqui so o detalhe para investigacao.
+        log.debug("Conflito de versao: {}", exception.message)
         return problem(HttpStatus.CONFLICT, "Conflito de versao", "A ordem foi alterada por outra requisicao; recarregue e tente novamente")
     }
 
@@ -54,7 +55,7 @@ class GlobalExceptionHandler {
         CannotCreateTransactionException::class,
     )
     fun unavailable(exception: Exception): ProblemDetail {
-        log.warn("Falha transitoria de banco: {}", exception.message)
+        log.debug("Falha transitoria de banco: {}", exception.message)
         return problem(HttpStatus.SERVICE_UNAVAILABLE, "Servico indisponivel", "Falha transitoria; tente novamente")
     }
 

@@ -9,20 +9,13 @@ import com.fiap.mechanicalhub.orders.domain.exceptions.InvalidOrderRequestExcept
 import com.fiap.mechanicalhub.orders.domain.exceptions.VehicleNotFoundException
 import com.fiap.mechanicalhub.orders.domain.model.NewServiceOrder
 import com.fiap.mechanicalhub.orders.domain.model.ServiceOrder
+import com.fiap.mechanicalhub.orders.logging.FlowLog
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.UUID
-
-data class OpenServiceOrderCommand(
-    val customerId: UUID,
-    val vehicleId: UUID,
-    val repairIds: List<UUID>,
-    val requestDescription: String,
-    val userId: UUID,
-)
 
 /** POST /orders: abre a ordem ja em diagnostico para cliente e veiculo existentes. */
 @Service
@@ -55,7 +48,10 @@ class OpenServiceOrderUseCase(
                 ),
                 UUID::randomUUID,
             )
-        return serviceOrderRepository.save(order)
+        val saved = serviceOrderRepository.save(order)
+        FlowLog.assignOrder(saved.id)
+        FlowLog.detail("orderNumber" to saved.orderNumber, "orderStatus" to saved.status, "repairIds" to command.repairIds)
+        return saved
     }
 
     /** Cliente e veiculo precisam existir, e o veiculo precisa ser do cliente. */

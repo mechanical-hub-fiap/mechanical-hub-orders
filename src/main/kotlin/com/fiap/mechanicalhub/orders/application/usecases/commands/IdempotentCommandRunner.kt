@@ -1,28 +1,11 @@
 package com.fiap.mechanicalhub.orders.application.usecases.commands
 
-import com.fiap.mechanicalhub.orders.application.events.OutgoingEvent
-import com.fiap.mechanicalhub.orders.application.notifications.Notification
 import com.fiap.mechanicalhub.orders.application.ports.ConsumerTransaction
 import com.fiap.mechanicalhub.orders.application.ports.InboxPort
 import com.fiap.mechanicalhub.orders.application.ports.OutboxPort
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
-
-/** Efeito de um comando: resposta para o outbox e notificacao para depois do COMMIT. */
-data class CommandEffect(
-    val response: OutgoingEvent? = null,
-    val notification: Notification? = null,
-)
-
-sealed interface CommandOutcome {
-    data class Applied(
-        val notification: Notification?,
-    ) : CommandOutcome
-
-    /** Ja processado: nada reaplicado (a resposta original, se houve, e regravada no outbox). */
-    data object Duplicate : CommandOutcome
-}
 
 /**
  * Consumo idempotente (TD_finishedOS.md §0.3), na transacao do caso de uso:

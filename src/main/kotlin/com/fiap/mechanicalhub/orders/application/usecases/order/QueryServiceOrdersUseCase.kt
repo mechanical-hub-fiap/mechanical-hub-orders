@@ -8,12 +8,6 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
-/** Ordem acompanhada do nome de cada reparo do catalogo. */
-data class ServiceOrderDetails(
-    val order: ServiceOrder,
-    val repairNames: Map<UUID, String>,
-)
-
 /** GET /orders/{orderId} e GET /orders. */
 @Service
 class QueryServiceOrdersUseCase(

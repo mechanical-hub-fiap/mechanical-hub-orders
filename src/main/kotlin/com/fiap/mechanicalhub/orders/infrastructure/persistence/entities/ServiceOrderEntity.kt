@@ -1,7 +1,6 @@
 package com.fiap.mechanicalhub.orders.infrastructure.persistence.entities
 
 import com.fiap.mechanicalhub.orders.domain.enums.OrderStatusEnum
-import com.fiap.mechanicalhub.orders.domain.enums.TaskStatusEnum
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -63,19 +62,3 @@ class ServiceOrderEntity(
     @JoinColumn(name = "service_order_id", nullable = false, updatable = false)
     var tasks: MutableList<OrderTaskEntity> = mutableListOf()
 }
-
-@Entity
-@Table(name = "order_tasks")
-class OrderTaskEntity(
-    @Id
-    var id: UUID,
-    @Column(name = "service_id", nullable = false, updatable = false)
-    var repairId: UUID,
-    @Enumerated(EnumType.STRING)
-    @Column(name = "service_status", nullable = false)
-    var status: TaskStatusEnum,
-    @Column(name = "started_at")
-    var startedAt: Instant?,
-    @Column(name = "finished_at")
-    var finishedAt: Instant?,
-)
