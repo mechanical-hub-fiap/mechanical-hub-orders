@@ -26,8 +26,8 @@ import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 
 /**
- * Fluxos da saga do ponto de vista do orders (TD_finishedOS, TD_PendenciaEstoque,
- * TD_budgetRefused e TD_paymentFailed). O teste faz o papel do orquestrador:
+ * Fluxos da saga do ponto de vista do orders (td_finished_os, td_stock_pending,
+ * td_budget_refused e td_payment_failed). O teste faz o papel do orquestrador:
  * le os eventos publicados pelo relay e envia os comandos seguintes pela fila
  * real (LocalStack), na ordem da tabela de mechanical-hub-orchestrator-spec.md §3.
  */

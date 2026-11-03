@@ -8,7 +8,7 @@ import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
 
 /**
- * Consumo idempotente (TD_finishedOS.md §0.3), na transacao do caso de uso:
+ * Consumo idempotente (td_finished_os.md §0.3), na transacao do caso de uso:
  * deduplicacao em `inbox_events` → regra → `inbox_events` → `outbox_events`.
  */
 @Component

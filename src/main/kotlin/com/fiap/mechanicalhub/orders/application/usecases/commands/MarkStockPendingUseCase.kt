@@ -7,7 +7,7 @@ import com.fiap.mechanicalhub.orders.logging.FlowLog
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
-/** `markStockPending` → `has_stock_pending = true` (TD_PendenciaEstoque.md P3). */
+/** `markStockPending` → `has_stock_pending = true` (td_stock_pending.md P3). */
 @Service
 class MarkStockPendingUseCase(
     private val serviceOrderRepository: ServiceOrderRepository,

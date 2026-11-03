@@ -7,7 +7,7 @@ import com.fiap.mechanicalhub.orders.logging.FlowLog
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
-/** `clearStockPending` → `has_stock_pending = false` (TD_PendenciaEstoque.md P6). */
+/** `clearStockPending` → `has_stock_pending = false` (td_stock_pending.md P6). */
 @Service
 class ClearStockPendingUseCase(
     private val serviceOrderRepository: ServiceOrderRepository,
