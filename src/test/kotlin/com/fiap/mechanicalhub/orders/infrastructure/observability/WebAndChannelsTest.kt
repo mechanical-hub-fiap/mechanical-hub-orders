@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Test
 import org.slf4j.MDC
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
-import org.springframework.web.servlet.config.annotation.InterceptorRegistry
 import org.springframework.web.servlet.HandlerMapping
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue

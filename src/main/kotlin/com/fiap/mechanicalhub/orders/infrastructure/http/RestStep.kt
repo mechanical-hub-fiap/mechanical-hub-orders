@@ -7,13 +7,6 @@ import org.slf4j.Logger
 import org.springframework.dao.OptimisticLockingFailureException
 import org.springframework.dao.TransientDataAccessException
 
-/** Etapa de uma rota: `status` do log (logging-standard §3) e `msg` do `START` e do `END`. */
-data class RouteStep(
-    val status: String,
-    val start: String,
-    val end: String,
-)
-
 /**
  * Executa a rota como uma etapa do log (logging-standard §4): `START` na entrada HTTP, `END` com o contexto que o
  * caso de uso acrescentou e `FAIL` quando a requisicao falha. A rota decide a resposta HTTP, entao e ela quem loga o

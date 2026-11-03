@@ -37,8 +37,13 @@ class OrderCommandParser(
         body: String,
         field: String,
     ): String? =
-        runCatching { jsonMapper.readTree(body).get(field)?.takeIf { it.isString }?.asString() }
-            .getOrNull()
+        runCatching {
+            jsonMapper
+                .readTree(body)
+                .get(field)
+                ?.takeIf { it.isString }
+                ?.asString()
+        }.getOrNull()
             ?.takeIf { it.isNotBlank() }
 
     /** `status` do log (logging-standard §3): `releaseOrder` vira `RELEASE_ORDER`. */

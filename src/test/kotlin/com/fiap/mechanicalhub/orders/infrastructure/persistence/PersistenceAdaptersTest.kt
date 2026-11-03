@@ -109,7 +109,12 @@ class PersistenceAdaptersTest {
     @Test
     fun `given a filter when searching then specification and sort are passed to the repository`() {
         val order = aServiceOrder()
-        every { jpa.findAll(any<Specification<com.fiap.mechanicalhub.orders.infrastructure.persistence.entities.ServiceOrderEntity>>(), any<Sort>()) } returns
+        every {
+            jpa.findAll(
+                any<Specification<com.fiap.mechanicalhub.orders.infrastructure.persistence.entities.ServiceOrderEntity>>(),
+                any<Sort>(),
+            )
+        } returns
             listOf(order.toNewEntity(FIXED_NOW))
 
         val result =
@@ -188,7 +193,7 @@ class PersistenceAdaptersTest {
         every { rs.getString("event_type") } returns "orderApproved"
         every { rs.getString("payload") } returns "{}"
         every { jdbc.query(any<String>(), any<RowMapper<Any>>(), any<Any>()) } answers {
-            listOf(secondArg<RowMapper<Any>>().mapRow(rs, 0)!!)
+            listOf(secondArg<RowMapper<Any>>().mapRow(rs, 0))
         }
 
         assertTrue(store.tryAcquireLeadership())
@@ -209,7 +214,7 @@ class PersistenceAdaptersTest {
         val rs = mockk<ResultSet>()
         every { rs.getString("response") } returns codec.encode(event)
         every { jdbc.query(any<String>(), any<RowMapper<Any>>(), any<Any>()) } answers {
-            listOf(secondArg<RowMapper<Any>>().mapRow(rs, 0)!!)
+            listOf(secondArg<RowMapper<Any>>().mapRow(rs, 0))
         }
 
         inbox.register("key", event)
