@@ -90,7 +90,7 @@ Os quatro fluxos da saga (caminho feliz, pendência de estoque, recusa e pagamen
 
 ### Postman
 
-`docs/postman/mechanical-hub-orders.postman_collection.json`. Com `mode = local` e `baseUrl = http://localhost:8080`, a pasta *Mecanico* envia os headers `x-user-*` direto ao serviço. Pelo API Gateway: `mode = gateway`, `baseUrl` = URL do gateway, CPF e senha em `cpf`/`password` e rode *Auth / Login* primeiro.
+`docs/api/mechanical-hub-orders.postman_collection.json`. Com `mode = local` e `baseUrl = http://localhost:8080`, a pasta *Mecanico* envia os headers `x-user-*` direto ao serviço. Pelo API Gateway: `mode = gateway`, `baseUrl` = URL do gateway, CPF e senha em `cpf`/`password` e rode *Auth / Login* primeiro.
 
 ## Configuração
 
