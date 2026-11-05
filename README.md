@@ -77,7 +77,7 @@ PostgreSQL (o RDS da Fase 3), porque ordem, cliente, veículo e reparos são for
 
 ![Relatório JaCoCo](docs/assets/coverage-report.png)
 
-Última execução local do JaCoCo (2026-11-03): **97,0% de linhas** e 81,4% de branches. Meta: ≥ 80% (o build falha abaixo disso). Os quatro fluxos da saga estão em `SagaFlowIntegrationTest`, com o teste no papel do orquestrador.
+Relatório JaCoCo da última execução completa de `verify` (2026-11-02): **98,1% de linhas** e 81,4% de branches. Meta: ≥ 80% (o build falha abaixo disso). Os quatro fluxos da saga estão em `SagaFlowIntegrationTest`, com o teste no papel do orquestrador.
 
 ## CI/CD
 
