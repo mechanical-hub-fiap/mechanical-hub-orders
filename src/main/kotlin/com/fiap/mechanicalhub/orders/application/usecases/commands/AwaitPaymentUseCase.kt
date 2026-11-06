@@ -8,7 +8,7 @@ import com.fiap.mechanicalhub.orders.logging.FlowLog
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
-/** `sendPaymentLink` → `AWAITING_PAYMENT` e link ao cliente (TD_finishedOS.md 15). */
+/** `sendPaymentLink` → `AWAITING_PAYMENT` e link ao cliente (td_finished_os.md 15). */
 @Service
 class AwaitPaymentUseCase(
     private val serviceOrderRepository: ServiceOrderRepository,

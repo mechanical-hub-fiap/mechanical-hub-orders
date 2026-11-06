@@ -5,7 +5,7 @@ import java.security.SecureRandom
 import java.util.Base64
 
 /**
- * Token de aprovacao do cliente (TD_finishedOS.md passo 11): 32 bytes do
+ * Token de aprovacao do cliente (td_finished_os.md passo 11): 32 bytes do
  * `SecureRandom` em base64url. Somente o SHA-256 e persistido.
  */
 @JvmInline

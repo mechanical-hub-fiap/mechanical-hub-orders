@@ -8,7 +8,7 @@ import com.fiap.mechanicalhub.orders.logging.FlowLog
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
-/** `releaseOrder` → `READY_FOR_EXECUTION` e aviso ao mecanico (TD_finishedOS.md 18). */
+/** `releaseOrder` → `READY_FOR_EXECUTION` e aviso ao mecanico (td_finished_os.md 18). */
 @Service
 class ReleaseOrderUseCase(
     private val serviceOrderRepository: ServiceOrderRepository,

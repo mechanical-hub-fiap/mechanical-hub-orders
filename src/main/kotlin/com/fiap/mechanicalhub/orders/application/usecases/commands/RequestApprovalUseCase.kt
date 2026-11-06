@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.security.SecureRandom
 
-/** `sendApproval` → `WAITING_APPROVAL`; token novo so no primeiro processamento (TD_finishedOS.md 11). */
+/** `sendApproval` → `WAITING_APPROVAL`; token novo so no primeiro processamento (td_finished_os.md 11). */
 @Service
 class RequestApprovalUseCase(
     private val serviceOrderRepository: ServiceOrderRepository,

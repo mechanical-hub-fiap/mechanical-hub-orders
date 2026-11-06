@@ -1,136 +1,94 @@
 # mechanical-hub-orders
 
-Cria ordens de serviço, altera o status da ordem e expõe a API de interface do sistema (mecânicos e cliente).
+Porta de entrada do Mechanical Hub: expõe a API do mecânico e do cliente, mantém a ordem de serviço e seu status, envia as notificações, inicia a saga e executa os comandos do orquestrador.
+Kotlin, Java 25, Spring Boot 4.1, PostgreSQL 16 (Flyway), Amazon SQS FIFO, springdoc-openapi.
 
-Serviço da Fase 4 do Mechanical Hub (Kotlin, Java 25, Spring Boot 4.1, PostgreSQL 16, Amazon SQS FIFO). Spec: `MechanicalHub/planning/mechanical-hub-orders-spec.md`.
+[![CI/CD](https://github.com/mechanical-hub-fiap/mechanical-hub-orders/actions/workflows/deploy.yml/badge.svg)](https://github.com/mechanical-hub-fiap/mechanical-hub-orders/actions/workflows/deploy.yml) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=mechanical-hub-orders&metric=coverage)](https://sonarcloud.io/summary/new_code?id=mechanical-hub-orders) [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=mechanical-hub-orders&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=mechanical-hub-orders)
 
 ## Responsabilidade
 
-**Faz:** ordem de serviço e seu status, reparos da ordem (`order_tasks`), dados de clientes, veículos e funcionários (somente leitura, vindos das seeds), catálogo de reparos (sem preço), API para mecânico e cliente, notificações ao cliente e ao mecânico, início da saga e execução dos comandos do orquestrador.
-
-**Não faz:** estoque e materiais (`stock`), preços e pagamento (`billing`), histórico da saga (`orchestrator`), cadastro de catálogo, relatórios.
-
-O banco do `orders` também é lido pela Lambda `authenticate` do `mechanical-hub-auth` (`users`/`profiles`, role `mechanical_hub_auth` com `GRANT SELECT` concedido pela migration `V3`).
+- **Faz:** ordem de serviço e status, reparos da ordem, clientes, veículos e funcionários (somente leitura), catálogo de reparos sem preço, API do mecânico e do cliente, notificações, início da saga e execução dos comandos do orquestrador.
+- **Não faz:** estoque e materiais (`stock`), preço e pagamento (`billing`), histórico da saga (`orchestrator`), autenticação (Lambda `authenticate`, que lê `users`/`profiles` deste banco).
+- **Fora do escopo por enquanto:** cadastros (dados vêm das seeds), status `RECEIVED`, expiração do token de aprovação (FR-07). Detalhes em [Decisões e limitações](docs/mechanical-hub-orders-architecture-spec.md#9-decisões-e-limitações).
 
 ## Papel na saga
 
-O `orders` inicia a saga e executa os comandos do orquestrador. Toda publicação passa pelo **outbox** (mesma transação da alteração); todo comando é deduplicado em `inbox_events` por `idempotencyKey = {transactionId}:{STEP}`.
-
-```
-mecânico ──PATCH PREPARING──▶ orders ──diagnosisCompleted──▶ orquestrador ──▶ stock / billing
-                                ▲                                  │
-                                └──── sendApproval, markStockPending, clearStockPending,
-                                      sendPaymentLink, releaseOrder, cancelOrder
-cliente ──approve / reject──▶ orders ──orderApproved / orderRejected──▶ orquestrador
+```mermaid
+flowchart LR
+    M[Mecânico] & C[Cliente] -- REST --> O((orders))
+    O -- diagnosisCompleted / orderApproved / orderRejected / orderFinished / orderCanceled --> ORC((orchestrator))
+    ORC -- sendApproval / markStockPending / clearStockPending / sendPaymentLink / releaseOrder / cancelOrder --> O
 ```
 
-| Publica (fila `mechanical-hub-orchestrator-events.fifo`) | Quando |
-|---|---|
-| `diagnosisCompleted` | `PATCH /orders/{id}/status` → `PREPARING` |
-| `orderApproved` / `orderRejected` | cliente aprova / recusa o orçamento |
-| `orderFinished` | `PATCH /orders/{id}/status` → `FINISHED` |
-| `orderCanceled` | consumo de `cancelOrder` |
+A saga começa quando o mecânico conclui o diagnóstico (`PATCH status → PREPARING`). O orders muda o status da ordem conforme os comandos do orquestrador e avisa cliente e mecânico. A aprovação ou recusa do cliente e a finalização da ordem viram eventos para o orquestrador. Estratégia: [RFC-0005](https://github.com/mechanical-hub-fiap/mechanical-hub-orchestrator/blob/main/docs/rfc/RFC-0005-saga-orquestrada.md) / [ADR-0005](https://github.com/mechanical-hub-fiap/mechanical-hub-orchestrator/blob/main/docs/adr/ADR-0005-divisao-em-microsservicos.md).
 
-| Consome (fila `mechanical-hub-orders-commands.fifo`) | Efeito | Depois do `COMMIT` |
-|---|---|---|
-| `sendApproval` | `WAITING_APPROVAL`, grava orçamento, saga e hash do token | e-mail/WhatsApp com orçamento e link de decisão |
-| `markStockPending` / `clearStockPending` | liga / desliga `has_stock_pending` | — |
-| `sendPaymentLink` | `AWAITING_PAYMENT` | link de pagamento ao cliente |
-| `releaseOrder` | `READY_FOR_EXECUTION` | aviso ao mecânico responsável |
-| `cancelOrder` | `CANCELED` + `orderCanceled` | — |
+## Stack
 
-Falhas (`failure_handling.md`): erro transitório não apaga a mensagem e ajusta o *visibility timeout* (1 s → 8 s, até 6 recebimentos, depois DLQ nativa); erro permanente (contrato inválido, transição inválida) vai direto para `mechanical-hub-orders-commands-dlq.fifo` com `errorClass`/`errorMessage`. O relay do outbox publica a cada 1 s, em lotes de 100 por `sequence`, com liderança por `pg_try_advisory_lock`.
-
-## Endpoints
-
-| Rota | Quem | Observação |
-|---|---|---|
-| `POST /orders` | mecânico | abre a ordem em `IN_DIAGNOSIS` para cliente e veículo das seeds |
-| `PATCH /orders/{orderId}/repairs` | mecânico | só em `IN_DIAGNOSIS` |
-| `PATCH /orders/{orderId}/status` | mecânico | `PREPARING`, `IN_PROGRESS`, `FINISHED`, `DELIVERED` |
-| `POST /orders/status` | mecânico | status do reparo (`STARTED`, `FINISHED`) com a ordem em `IN_PROGRESS` |
-| `GET /orders/{orderId}`, `GET /orders?status=&customerId=&responsibleUserId=` | mecânico | inclui `hasStockPending` |
-| `GET /services` | mecânico | catálogo de reparos |
-| `GET /mechanical-hub/service-orders/{orderNumber}` | cliente | header `X-Approval-Token` |
-| `POST /mechanical-hub/service-orders/{orderId}/approve` \| `/reject` | cliente | header `X-Approval-Token` |
-
-Rotas do mecânico exigem os headers `x-user-id`, `x-user-role`, `x-user-name`, injetados pelo API Gateway (sem eles: `401`). Token do cliente ausente ou inválido: `404`. Transição inválida ou conflito de `version`: `409`. Falha transitória de banco: `503`. Swagger em `/swagger-ui.html` (fora do gateway; usar `kubectl port-forward` no cluster).
+| Linguagem/framework | Banco | Mensageria | Testes | Qualidade | Observabilidade |
+|---|---|---|---|---|---|
+| Kotlin, Java 25, Spring Boot 4.1 | PostgreSQL 16 + Flyway | Amazon SQS FIFO | JUnit, Testcontainers | JaCoCo, ktlint, detekt, SonarQube Cloud | OpenTelemetry, Prometheus, Grafana |
 
 ## Como rodar
 
-Pré-requisitos: JDK 25 e Docker.
+- **Pré-requisitos:** JDK 25 e Docker.
+- **Dependências locais:** o profile `local` sobe pelo `docker-compose.yml` o PostgreSQL (porta 5433) e o LocalStack (4566, filas FIFO + DLQs).
+- **Variáveis de ambiente:** [`.env.example`](.env.example); sem chave AWS (na nuvem os pods usam a `LabRole`).
+- **Rodar e verificar:**
 
 ```bash
-# Testes unitários e de integração (Testcontainers: PostgreSQL + LocalStack),
-# ktlint, detekt e cobertura mínima de 80% (jacoco:check)
-./mvnw verify
-
-# Aplicação local: sobe PostgreSQL (porta 5433) e LocalStack (4566, filas FIFO + DLQs)
-# pelo docker-compose e roda em http://localhost:8080
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+curl -s http://localhost:8080/actuator/health        # {"status":"UP"}
 ```
 
-Usuários, clientes e veículos vêm das seeds (UUIDs do monolito). Mecânico padrão: `7a2e9b41-3c5d-4f60-8e1a-000000000002` (CPF `111.444.777-35`); cliente `96052f8d-0817-4124-84ad-918b7c9ac73d` com o veículo `d0803851-6a5f-4fea-8463-a723be0e390c`.
+Dados das seeds: mecânico `7a2e9b41-3c5d-4f60-8e1a-000000000002` (CPF `111.444.777-35`); cliente `96052f8d-0817-4124-84ad-918b7c9ac73d` com o veículo `d0803851-6a5f-4fea-8463-a723be0e390c`. Sem o orquestrador, os comandos podem ser enviados direto à fila `mechanical-hub-orders-commands.fifo` do LocalStack.
 
-### Simulando o orquestrador localmente
+## API
 
-Sem o orquestrador no ar, os comandos podem ser enviados direto à fila do LocalStack. Exemplo de `sendApproval` (troque `<orderId>`):
+| Método | Rota | Descrição |
+|---|---|---|
+| POST | `/orders` | Abre a ordem em `IN_DIAGNOSIS` (cliente, veículo e reparos) |
+| PATCH | `/orders/{orderId}/repairs` | Adiciona reparos (só em `IN_DIAGNOSIS`) |
+| PATCH | `/orders/{orderId}/status` | `PREPARING`, `IN_PROGRESS`, `FINISHED`, `DELIVERED` |
+| POST | `/orders/status` | Andamento de um reparo (`STARTED`, `FINISHED`) |
+| GET | `/orders/{orderId}` | Detalhe da ordem, com `hasStockPending` |
+| GET | `/orders?status=&customerId=&responsibleUserId=` | Lista filtrada |
+| GET | `/services` | Catálogo de reparos |
+| GET | `/mechanical-hub/service-orders/{orderNumber}` | Cliente: resumo e orçamento (`X-Approval-Token`) |
+| POST | `/mechanical-hub/service-orders/{orderId}/approve` | Cliente: aprova o orçamento |
+| POST | `/mechanical-hub/service-orders/{orderId}/reject` | Cliente: recusa o orçamento |
+
+Rotas do mecânico exigem os headers `x-user-*` do API Gateway (`401` sem eles). Swagger em `/swagger-ui.html`; Postman em [`docs/api/mechanical-hub-orders.postman_collection.json`](docs/api/mechanical-hub-orders.postman_collection.json) (modos `local` e `gateway`). Erros e corpos: [Interface síncrona](docs/mechanical-hub-orders-architecture-spec.md#4-interface-síncrona-rest).
+
+## Mensagens
+
+- **Consome:** `sendApproval`, `markStockPending`, `clearStockPending`, `sendPaymentLink`, `releaseOrder`, `cancelOrder`.
+- **Publica:** `diagnosisCompleted`, `orderApproved`, `orderRejected`, `orderFinished`, `orderCanceled`.
+- Contratos, filas e idempotência: [Interface assíncrona](docs/mechanical-hub-orders-architecture-spec.md#5-interface-assíncrona-mensagens).
+
+## Dados
+
+PostgreSQL (o RDS da Fase 3), porque ordem, cliente, veículo e reparos são fortemente relacionados e o banco é lido pela Lambda de autenticação. Detalhes em [Modelo de dados](docs/mechanical-hub-orders-architecture-spec.md#6-modelo-de-dados).
+
+## Testes e cobertura
 
 ```bash
-ORDER_ID=<orderId>; TX=$(uuidgen); EVENT=$(uuidgen)
-docker compose exec localstack awslocal sqs send-message \
-  --queue-url http://localhost:4566/000000000000/mechanical-hub-orders-commands.fifo \
-  --message-group-id "$ORDER_ID" --message-deduplication-id "$EVENT" \
-  --message-body "{\"eventId\":\"$EVENT\",\"transactionId\":\"$TX\",\"orderId\":\"$ORDER_ID\",\"type\":\"sendApproval\",\"version\":1,\"timestamp\":\"2026-10-11T12:00:00Z\",\"idempotencyKey\":\"$TX:SEND_APPROVAL\",\"budgetId\":\"$(uuidgen)\",\"orderCost\":308.10}"
+./mvnw verify   # unitários, integração (Testcontainers: PostgreSQL + LocalStack), ktlint, detekt e jacoco:check
 ```
 
-Os outros comandos seguem o mesmo envelope (`markStockPending`, `clearStockPending`, `releaseOrder`; `sendPaymentLink` com `paymentLink`; `cancelOrder` com `reason`). O e-mail ainda é registrado em log: o link de aprovação, com o token, aparece no log `Enviando email para ...`. Os eventos publicados podem ser lidos com `awslocal sqs receive-message` na fila `mechanical-hub-orchestrator-events.fifo`.
+![Relatório JaCoCo](docs/assets/coverage-report.png)
 
-Os quatro fluxos da saga (caminho feliz, pendência de estoque, recusa e pagamento não confirmado) estão automatizados em `SagaFlowIntegrationTest`, com o teste fazendo o papel do orquestrador pela fila real do LocalStack.
+Relatório JaCoCo da última execução completa de `verify` (2026-11-02): **98,1% de linhas** e 81,4% de branches. Meta: ≥ 80% (o build falha abaixo disso). Os quatro fluxos da saga estão em `SagaFlowIntegrationTest`, com o teste no papel do orquestrador.
 
-### Postman
+## CI/CD
 
-`docs/postman/mechanical-hub-orders.postman_collection.json`. Com `mode = local` e `baseUrl = http://localhost:8080`, a pasta *Mecanico* envia os headers `x-user-*` direto ao serviço. Pelo API Gateway: `mode = gateway`, `baseUrl` = URL do gateway, CPF e senha em `cpf`/`password` e rode *Auth / Login* primeiro.
-
-## Configuração
-
-Tudo por variáveis de ambiente (ConfigMap/Secret no cluster). Sem chave AWS: os pods usam a `LabRole` dos nós.
-
-| Variável | Padrão local | Origem no deploy |
-|---|---|---|
-| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME` | `localhost`, `5432`, `mechanical_hub_orders`, `orders_app` | output `databases["orders"]` do `mechanical-hub-database` |
-| `DB_PASSWORD` | `orders_app` | secret `ORDERS_DB_APP_PASSWORD` |
-| `ORDERS_COMMANDS_QUEUE_URL`, `ORDERS_COMMANDS_DLQ_URL`, `ORCHESTRATOR_EVENTS_QUEUE_URL` | nomes das filas | outputs `sqs_queue_urls` / `sqs_dlq_urls` do `mechanical-hub-infra` |
-| `FRONTEND_BASE_URL` | `http://localhost:3000` | variável `FRONTEND_BASE_URL` do repositório |
-| `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_TRACES_EXPORTER` | — | output `otlp_http_endpoint` (sem coletor: `none`) |
-
-## Deploy
-
-- `Dockerfile` multi-stage (JRE 25, usuário sem privilégios, agente OpenTelemetry com propagação do trace nos *message attributes* do SQS).
-- `k8s/`: Namespace `production`, ConfigMap, Secret, Deployment (requests 250m/640Mi, limits 1 vCPU/1 GiB, probes do actuator), Service NodePort **30080** (target group do NLB no `mechanical-hub-infra`) e HPA de 1 a 2 réplicas.
-- `.github/workflows/deploy.yml`: em PR, `verify` + SonarQube Cloud (quality gate); na `main`, também lê os remote states (`ci/remote-state`), publica a imagem no ECR `mechanical-hub/orders`, aplica os manifestos no EKS e roda `ci/smoke-test.sh` via `port-forward`.
-
-Secrets/variáveis do repositório: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`, `AWS_ACCOUNT_ID`, `ORDERS_DB_APP_PASSWORD`, `SONAR_TOKEN`; variáveis `SONAR_ORGANIZATION` e `FRONTEND_BASE_URL`.
-
-Ordem no ambiente zerado (`infrastructure.md` §7): `mechanical-hub-infra` → `mechanical-hub-database` (incluindo usuário `orders_app` e role `mechanical_hub_auth`) → este pipeline → `mechanical-hub-auth`.
-
-O smoke test também roda localmente contra a imagem: `docker build -t mechanical-hub-orders:local .`, suba o container apontando para o docker-compose e execute `ci/smoke-test.sh http://localhost:<porta>`.
+Build → testes → SonarQube Cloud (quality gate) → imagem no ECR → deploy no EKS → smoke test. Workflow: [`deploy.yml`](.github/workflows/deploy.yml); executado também pela pipeline única [`deploy-all.yml`](https://github.com/mechanical-hub-fiap/mechanical-hub-infra/blob/main/.github/workflows/deploy-all.yml) do `mechanical-hub-infra`.
 
 ## Observabilidade
 
-- `/actuator/prometheus` (raspado pelo `mechanical-hub-infra` pelo label `app.kubernetes.io/name: orders`), com `outbox_oldest_pending_age_seconds` (alerta > 60 s) e `sqs_dlq_sent_total`.
-- Logs JSON com `orderId`, `transactionId`, `eventId`, `trace_id` e `span_id`.
-- Traces pelo agente OpenTelemetry; o contexto atravessa o SQS até o orquestrador.
+Logs JSON com `orderId`, `status`/`stage` e `orderStatus` (sem dados do cliente); métricas `outbox_oldest_pending_age_seconds` e `sqs_dlq_sent_total` no Prometheus; traces OpenTelemetry pelo SQS. Padrão: [logging-standard](https://github.com/mechanical-hub-fiap/mechanical-hub-orchestrator/blob/main/docs/engineering/logging-standard.md).
 
-## Cobertura
+## Documentação
 
-Evidência da execução de `./mvnw verify` em 2026-10-11 (265 testes, 0 falhas):
-
-| Escopo | Cobertura de linhas |
-|---|---|
-| Total (JaCoCo, mesmas exclusões do Sonar) | **93,8%** (1130 de 1205 linhas) |
-| `domain` | 99,2% |
-| `application` | 99,7% |
-| `infrastructure` | 90,6% |
-
-Cobertura de branches: 73,0%. O build falha abaixo de 80% de linhas (`jacoco:check`). O relatório HTML fica em `target/site/jacoco/index.html` e, no CI, no artefato `jacoco-report` de cada execução; o SonarQube Cloud lê o `jacoco.xml` no quality gate do PR.
+- Arquitetura deste serviço: [`docs/mechanical-hub-orders-architecture-spec.md`](docs/mechanical-hub-orders-architecture-spec.md)
+- Documentação do sistema: [diagrama](https://github.com/mechanical-hub-fiap/mechanical-hub-orchestrator/blob/main/docs/architecture/mechanicalHubFase4Diagrama-v2.png) · [saga](https://github.com/mechanical-hub-fiap/mechanical-hub-orchestrator/blob/main/docs/design/saga_transaction_status.md) · [ADRs](https://github.com/mechanical-hub-fiap/mechanical-hub-orchestrator/tree/main/docs/adr) · [RFCs](https://github.com/mechanical-hub-fiap/mechanical-hub-orchestrator/tree/main/docs/rfc) · [TDs](https://github.com/mechanical-hub-fiap/mechanical-hub-orchestrator/tree/main/docs/design/distributedTransaction) · [data model](https://github.com/mechanical-hub-fiap/mechanical-hub-orchestrator/blob/main/docs/design/data_model.md)
+- Outros serviços: [mechanical-hub-orchestrator](https://github.com/mechanical-hub-fiap/mechanical-hub-orchestrator) · [mechanical-hub-stock](https://github.com/mechanical-hub-fiap/mechanical-hub-stock) · [mechanical-hub-billing](https://github.com/mechanical-hub-fiap/mechanical-hub-billing)

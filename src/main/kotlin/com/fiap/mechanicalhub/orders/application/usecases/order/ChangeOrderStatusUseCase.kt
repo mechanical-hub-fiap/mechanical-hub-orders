@@ -15,7 +15,7 @@ import java.util.UUID
 
 /**
  * PATCH /orders/{orderId}/status: traduz o status pedido pelo mecanico para o
- * metodo de dominio (TD_finishedOS.md §0.5). Status fora desta lista → 409.
+ * metodo de dominio (td_finished_os.md §0.5). Status fora desta lista → 409.
  */
 @Service
 class ChangeOrderStatusUseCase(

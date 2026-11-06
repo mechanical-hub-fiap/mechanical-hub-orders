@@ -8,7 +8,7 @@ import com.fiap.mechanicalhub.orders.logging.FlowLog
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
-/** `cancelOrder` → `CANCELED` + `orderCanceled` (TD_paymentFailed.md F5). Sem notificacao ao cliente. */
+/** `cancelOrder` → `CANCELED` + `orderCanceled` (td_payment_failed.md F5). Sem notificacao ao cliente. */
 @Service
 class CancelOrderUseCase(
     private val serviceOrderRepository: ServiceOrderRepository,

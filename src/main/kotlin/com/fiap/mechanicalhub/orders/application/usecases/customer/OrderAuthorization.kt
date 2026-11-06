@@ -6,7 +6,7 @@ import com.fiap.mechanicalhub.orders.domain.model.ServiceOrder
 
 /**
  * Token ausente, invalido ou ordem sem token (ainda sem orcamento) → 404, sem
- * revelar se a ordem existe (TD_finishedOS.md passo 12).
+ * revelar se a ordem existe (td_finished_os.md passo 12).
  */
 internal fun ServiceOrder?.authorizedBy(
     approvalToken: String?,

@@ -15,7 +15,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 /**
- * Aprovacao e recusa do mesmo orcamento ao mesmo tempo (TD_budgetRefused.md):
+ * Aprovacao e recusa do mesmo orcamento ao mesmo tempo (td_budget_refused.md):
  * so uma decisao vence; a outra recebe 409 (transicao invalida ou `version`).
  */
 class ConcurrentDecisionIntegrationTest : IntegrationTest() {
