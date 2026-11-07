@@ -21,7 +21,12 @@ import kotlin.test.assertTrue
 
 /** Flag desligada (ou ausente): o controller nao e criado e a rota nao existe, nem para o administrador. */
 @WebMvcTest(ApprovalTokenController::class)
-@Import(SecurityConfig::class, GatewayAuthenticationFilter::class, GlobalExceptionHandler::class, ApprovalTokenFlagDisabledTest.Beans::class)
+@Import(
+    SecurityConfig::class,
+    GatewayAuthenticationFilter::class,
+    GlobalExceptionHandler::class,
+    ApprovalTokenFlagDisabledTest.Beans::class,
+)
 @TestPropertySource(
     properties = [
         "mechanical-hub.orders.approval-token-reissue-enabled=false",

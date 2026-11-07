@@ -4,6 +4,7 @@ import com.fiap.mechanicalhub.orders.application.usecases.order.ReissueApprovalT
 import com.fiap.mechanicalhub.orders.application.usecases.order.ReissuedApprovalToken
 import com.fiap.mechanicalhub.orders.domain.approval.ApprovalToken
 import com.fiap.mechanicalhub.orders.fixtures.Seeds
+import com.fiap.mechanicalhub.orders.infrastructure.config.OrdersProperties
 import com.fiap.mechanicalhub.orders.infrastructure.http.error.GlobalExceptionHandler
 import com.fiap.mechanicalhub.orders.infrastructure.security.GatewayAuthenticationFilter
 import com.fiap.mechanicalhub.orders.infrastructure.security.SecurityConfig
@@ -14,15 +15,14 @@ import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import com.fiap.mechanicalhub.orders.infrastructure.config.OrdersProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
 import org.springframework.test.context.TestPropertySource
-import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.MockHttpServletRequestDsl
+import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.post
 import java.security.SecureRandom
 import java.util.UUID
