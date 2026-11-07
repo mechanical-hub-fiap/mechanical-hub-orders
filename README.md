@@ -53,7 +53,7 @@ Dados das seeds: mecânico `7a2e9b41-3c5d-4f60-8e1a-000000000002` (CPF `111.444.
 | GET | `/orders/{orderId}` | Detalhe da ordem, com `hasStockPending` |
 | GET | `/orders?status=&customerId=&responsibleUserId=` | Lista filtrada |
 | GET | `/services` | Catálogo de reparos |
-| POST | `/orders/{orderId}/approval-token` | Só `ADMINISTRATOR` e com `APPROVAL_TOKEN_REISSUE_ENABLED=true` (desligada por padrão, sem a flag a rota não existe): gera um novo token de aprovação, invalida o anterior e o devolve uma única vez (só em `WAITING_APPROVAL`). Uso em demonstração |
+| POST | `/orders/{orderId}/approval-token` | Só `ADMINISTRATOR` e com `APPROVAL_TOKEN_REISSUE_ENABLED=true` (ligada por padrão; com `false` a rota não existe): gera um novo token de aprovação, invalida o anterior e o devolve uma única vez (só em `WAITING_APPROVAL`). Uso em demonstração |
 | GET | `/mechanical-hub/service-orders/{orderNumber}` | Cliente: resumo e orçamento (`X-Approval-Token`) |
 | POST | `/mechanical-hub/service-orders/{orderId}/approve` | Cliente: aprova o orçamento |
 | POST | `/mechanical-hub/service-orders/{orderId}/reject` | Cliente: recusa o orçamento |

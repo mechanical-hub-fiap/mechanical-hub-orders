@@ -168,7 +168,7 @@
             }
           ],
           "request": {
-            "description": "So existe com APPROVAL_TOKEN_REISSUE_ENABLED=true (desligada por padrao: sem a flag, 404). Exige ADMINISTRATOR (no modo gateway, faca o login com um administrador) e a ordem em WAITING_APPROVAL (senao 409). Gera outro token, invalida o anterior e devolve o valor uma unica vez.",
+            "description": "So existe com APPROVAL_TOKEN_REISSUE_ENABLED=true (ligada por padrao; com a flag em false, 404). Exige ADMINISTRATOR (no modo gateway, faca o login com um administrador) e a ordem em WAITING_APPROVAL (senao 409). Gera outro token, invalida o anterior e devolve o valor uma unica vez.",
             "method": "POST",
             "url": "{{baseUrl}}/orders/{{orderId}}/approval-token"
           }

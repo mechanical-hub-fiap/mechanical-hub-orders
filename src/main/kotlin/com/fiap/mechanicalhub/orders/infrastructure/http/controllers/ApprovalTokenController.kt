@@ -23,7 +23,7 @@ import java.util.UUID
 /**
  * Reemissao do token de aprovacao, para demonstracoes e suporte: o token original nao e recuperavel (so o hash e
  * salvo), entao o endpoint gera outro e invalida o anterior. So existe com `mechanical-hub.orders.approval-token-reissue-enabled=true`
- * (variavel `APPROVAL_TOKEN_REISSUE_ENABLED`, desligada por padrao); desligado, a rota nao e registrada. So ADMINISTRATOR.
+ * (variavel `APPROVAL_TOKEN_REISSUE_ENABLED`, ligada por padrao; com `false`, a rota nao e registrada). So ADMINISTRATOR.
  */
 @RestController
 @RequestMapping("/orders")
