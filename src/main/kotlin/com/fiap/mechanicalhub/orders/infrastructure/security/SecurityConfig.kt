@@ -3,6 +3,7 @@ package com.fiap.mechanicalhub.orders.infrastructure.security
 import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
@@ -34,6 +35,8 @@ class SecurityConfig {
                     // Cliente: autenticado pelo token de aprovacao dentro do caso de uso.
                     .requestMatchers("/mechanical-hub/service-orders/**")
                     .permitAll()
+                    .requestMatchers(HttpMethod.POST, "/orders/*/approval-token")
+                    .hasRole(ADMINISTRATOR)
                     .requestMatchers("/orders", "/orders/**", "/services")
                     .hasAnyRole(MECHANICAL, ADMINISTRATOR)
                     .anyRequest()

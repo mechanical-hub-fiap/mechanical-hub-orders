@@ -28,6 +28,10 @@ data:
 
   ENVIRONMENT: production
 
+  # Reemissao do token de aprovacao (demonstracao). Mantenha "false"; para ligar sem novo deploy:
+  # kubectl set env -n production deploy/mechanical-hub-orders APPROVAL_TOKEN_REISSUE_ENABLED=true
+  APPROVAL_TOKEN_REISSUE_ENABLED: "false"
+
   # Agente OpenTelemetry. Sem coletor no ambiente, o pipeline grava
   # OTEL_TRACES_EXPORTER=none: o contexto continua sendo propagado pelo SQS
   # e o trace_id segue nos logs, so nao e exportado.
