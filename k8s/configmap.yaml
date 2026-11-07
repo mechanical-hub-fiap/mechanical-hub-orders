@@ -28,6 +28,10 @@ data:
 
   ENVIRONMENT: production
 
+  # Reemissao do token de aprovacao (demonstracao). Vem da variavel de repositorio
+  # APPROVAL_TOKEN_REISSUE_ENABLED do GitHub (padrao "true"); defina "false" e rode o deploy para desligar.
+  APPROVAL_TOKEN_REISSUE_ENABLED: "${APPROVAL_TOKEN_REISSUE_ENABLED}"
+
   # Agente OpenTelemetry. Sem coletor no ambiente, o pipeline grava
   # OTEL_TRACES_EXPORTER=none: o contexto continua sendo propagado pelo SQS
   # e o trace_id segue nos logs, so nao e exportado.

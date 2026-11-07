@@ -262,6 +262,7 @@ jobs:
           DB_USERNAME: ${{ needs.resolve-infra.outputs.db-username }}
           DB_PASSWORD: ${{ secrets.ORDERS_DB_APP_PASSWORD }}
           FRONTEND_BASE_URL: ${{ vars.FRONTEND_BASE_URL || 'http://localhost:3000' }}
+          APPROVAL_TOKEN_REISSUE_ENABLED: ${{ vars.APPROVAL_TOKEN_REISSUE_ENABLED || 'true' }}
           OTLP_HTTP_ENDPOINT: ${{ needs.resolve-infra.outputs.otlp-http-endpoint }}
         run: |
           set -euo pipefail

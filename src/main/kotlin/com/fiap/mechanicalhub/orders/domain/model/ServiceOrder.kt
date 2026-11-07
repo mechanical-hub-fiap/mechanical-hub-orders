@@ -83,6 +83,12 @@ data class ServiceOrder(
         )
     }
 
+    /** Troca o token do cliente (o anterior deixa de valer). So enquanto a ordem aguarda a decisao. */
+    fun reissueApprovalToken(approvalTokenHash: String): ServiceOrder {
+        requireStatus(WAITING_APPROVAL, "reemitir o token de aprovacao")
+        return copy(approvalTokenHash = approvalTokenHash)
+    }
+
     fun approve(): ServiceOrder = moveFrom(WAITING_APPROVAL, to = APPROVED, action = "aprovar")
 
     fun reject(): ServiceOrder = moveFrom(WAITING_APPROVAL, to = REJECTED, action = "recusar")

@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "mechanical-hub-orders",
-    "description": "Fluxo da ordem de servico no mechanical-hub-orders.\n\nModo `gateway` (padrao): `baseUrl` = URL do API Gateway; rode `Auth / Login` primeiro (CPF e senha do funcionario das seeds) e o JWT vai para `jwt`. O gateway injeta `x-user-*`.\n\nModo `local`: `baseUrl` = http://localhost:8080 e `mode` = local; o script da pasta Mecanico envia `x-user-id`, `x-user-role` e `x-user-name` direto ao servico.\n\nOs passos da saga entre `Finalizar diagnostico` e `Aprovar`/`Recusar` (sendApproval, sendPaymentLink, releaseOrder...) chegam pelo orquestrador; localmente, envie-os a fila do LocalStack (ver README). O token de aprovacao chega ao cliente na notificacao (log do servico) e vai em `approvalToken`.",
+    "description": "Fluxo da ordem de servico no mechanical-hub-orders.\n\nModo `gateway` (padrao): `baseUrl` = URL do API Gateway; rode `Auth / Login` primeiro (CPF e senha do funcionario das seeds) e o JWT vai para `jwt`. O gateway injeta `x-user-*`.\n\nModo `local`: `baseUrl` = http://localhost:8080 e `mode` = local; o script da pasta Mecanico envia `x-user-id`, `x-user-role` e `x-user-name` direto ao servico.\n\nOs passos da saga entre `Finalizar diagnostico` e `Aprovar`/`Recusar` (sendApproval, sendPaymentLink, releaseOrder...) chegam pelo orquestrador; localmente, envie-os a fila do LocalStack (ver README). O token de aprovacao chega ao cliente na notificacao (log do servico) e vai em `approvalToken`. Em demonstracoes, `Mecanico / Reemitir token de aprovacao` (ADMINISTRATOR, flag `APPROVAL_TOKEN_REISSUE_ENABLED=true`) gera um token novo e ja o grava em `approvalToken`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -138,6 +138,39 @@
                 { "key": "responsibleUserId", "value": "{{userId}}", "disabled": true }
               ]
             }
+          }
+        },
+        {
+          "name": "Reemitir token de aprovacao (ADMINISTRATOR, demo)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Rota so para ADMINISTRATOR. Em modo local, sobrescreve o papel do script da pasta.",
+                  "if (pm.collectionVariables.get('mode') === 'local') {",
+                  "  pm.request.headers.upsert({ key: 'x-user-role', value: 'ADMINISTRATOR' });",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 com token novo', () => pm.response.to.have.status(200));",
+                  "// O token novo vai para `approvalToken`; o anterior deixa de valer.",
+                  "pm.collectionVariables.set('approvalToken', pm.response.json().approvalToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "description": "So existe com APPROVAL_TOKEN_REISSUE_ENABLED=true (ligada por padrao; com a flag em false, 404). Exige ADMINISTRATOR (no modo gateway, faca o login com um administrador) e a ordem em WAITING_APPROVAL (senao 409). Gera outro token, invalida o anterior e devolve o valor uma unica vez.",
+            "method": "POST",
+            "url": "{{baseUrl}}/orders/{{orderId}}/approval-token"
           }
         },
         {
